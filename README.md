@@ -6,7 +6,7 @@
 
 A self-hosted corporate AI platform built on LibreChat, extended with document translation, market-report automation, transcript handling and employee development history. People work with assistants in chat, review their documents, make targeted corrections and download the resulting reports from one interface.
 
-![AI Corp Chat — platform overview](docs/assets/ai-corp-chat-preview.svg)
+![AI Corp Chat — platform overview](docs/assets/ai-corp-chat-preview.png)
 
 > **Status:** a portable, anonymized source edition of an existing application. The main interface is Russian; the documentation is available in English and Russian. No original accounts, conversations, employee records, uploaded documents, company branding or provider credentials are included. Ten assistant definitions are supplied with neutral ownership and without their original knowledge files. Model responses require your own configured providers; there is no hidden mock pretending to be a working model.
 
@@ -14,6 +14,12 @@ A self-hosted corporate AI platform built on LibreChat, extended with document t
 
 
 The private reference workbook and its extracted product-description catalog are not included. `api/server/services/MarketAnalysis/reference-catalog.json` is an empty, operator-editable template; add authorized reference entries with provenance or use the module’s document research. The report layout and calculation/export tools remain available.
+
+## Built on LibreChat — thank you
+
+AI Corp Chat is built on the open-source [LibreChat](https://github.com/danny-avila/LibreChat) platform. LibreChat provides the foundation for conversations, model integrations, assistants and administration; this project extends that foundation with its own interface and business workflows.
+
+**A huge thank you to the LibreChat team and all its contributors for their work, open source and the foundation that made this project possible.** The original license and copyright notices are preserved in [LICENSE](LICENSE).
 
 ## What you can run
 

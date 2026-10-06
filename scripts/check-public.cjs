@@ -3,7 +3,7 @@ function problems(text,file){const found=[];const checks=[['private key',/-----B
  for(const term of (process.env.PUBLIC_CHECK_BLOCKED_TERMS||'').split(',').map(s=>s.trim()).filter(Boolean))if(text.toLowerCase().includes(term.toLowerCase()))found.push(`${file}: operator-blocked term`);
  for(const [label,re]of checks)if(re.test(text))found.push(`${file}: ${label}`);return found;}
 function check(root=path.resolve(__dirname,'..')){
- const names=cp.execFileSync('git',['ls-files','--cached','--others','--exclude-standard','-z'],{cwd:root,encoding:'utf8'}).split('\0').filter(Boolean);const issues=[];
+ const names=cp.execFileSync('git',['ls-files','--cached','--others','--exclude-standard','-z'],{cwd:root,encoding:'utf8'}).split('\0').filter(Boolean).filter(name=>fs.existsSync(path.join(root,name)));const issues=[];
  for(const name of names){if(name==='scripts/check-public.cjs'||name.startsWith('scripts/tests/'))continue;const file=path.join(root,name);if(!fs.statSync(file).isFile())continue;
   if(/(?:^|\/)(?:\.env(?:\..+)?|auth\.json|storageState\.json)$/.test(name)&&name!=='.env.example')issues.push(`${name}: runtime secret/session file`);
   if(/(?:^|\/)(?:uploads|logs|data-node|secrets)\//.test(name))issues.push(`${name}: runtime data`);
