@@ -1,0 +1,39 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Minimize2, ChevronDown, ChevronUp, GripHorizontal, Download, LoaderCircle } from 'lucide-react';
+type Data=Record<string,any>;
+const fmt=(v:any)=>typeof v==='number'?new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(v):String(v??'—');
+export default function MarketTablePreview({analysis,busy,workingLabel,onClose,onDownload,children}:{analysis:Data;busy:boolean;workingLabel?:string;onClose:()=>void;onDownload:()=>void;children:React.ReactNode}) {
+  const dialog=useRef<HTMLDialogElement>(null),panel=useRef<HTMLDivElement>(null),previous=useRef<Record<string,string>>({});
+  const lastResult=useRef(analysis.result);if(analysis.result)lastResult.current=analysis.result;
+  const [sheet,setSheet]=useState(analysis.result?'market':analysis.facts.some((f:Data)=>f.status==='approved')?'facts':'market'),[collapsed,setCollapsed]=useState(false),[page,setPage]=useState(0),[position,setPosition]=useState<{x:number;y:number}|null>(null);
+  const [changed,setChanged]=useState<Record<string,string>>({});const drag=useRef<{x:number;y:number;left:number;top:number}|null>(null);
+  const result=analysis.result||lastResult.current;
+  useEffect(()=>{const d=dialog.current;const focus=document.activeElement as HTMLElement|null;d?.showModal();return()=>{d?.close();focus?.focus();};},[]);
+  const clamp=(x:number,y:number)=>({x:Math.max(8,Math.min(x,window.innerWidth-(panel.current?.offsetWidth||360)-8)),y:Math.max(64,Math.min(y,window.innerHeight-(panel.current?.offsetHeight||80)-8))});
+  useEffect(()=>{const resize=()=>setPosition(p=>p?clamp(p.x,p.y):p);window.addEventListener('resize',resize);resize();return()=>window.removeEventListener('resize',resize);},[collapsed]);
+  const grid=useMemo(()=>{
+    if(sheet==='comments')return {headers:['Раздел','Комментарий','Проверка'],rows:(analysis.comments||[]).map((c:Data)=>({id:c.title+JSON.stringify(c.evidenceIds),values:[c.title,c.text,c.needsReview?'Основания изменились — проверить':'Сохранено']}))};
+    if(sheet==='facts')return {headers:['Показатель','Значение','Единица','Период','Источник','Статус'],rows:analysis.facts.map((f:Data)=>({id:f.id,values:[f.label,f.value,f.unit,f.period,f.source,f.status==='approved'?'Подтверждено':f.status==='rejected'?'Исключено':'Проверить']}))};
+    if(sheet==='details'&&result)return {headers:['Бренд','SKU','Форма','Дозировка','Период','Упаковки','Рубли','Цена'],rows:result.details.map((r:Data)=>({id:JSON.stringify([r.brand,r.sku,r.form,r.dosage,r.pack,r.period,r.location]),values:[r.brand,r.sku,r.form,r.dosage,r.period,r.units,r.sales,r.price??(r.units?r.sales/r.units:null)]}))};
+    if(result)return {headers:['Бренд',...result.periods.flatMap((p:string)=>[`${p} · руб.`,`${p} · уп.`,`${p} · цена`,`${p} · доля, %`])],rows:[...result.brands.map((b:Data)=>({id:b.brand,values:[b.brand,...result.periods.flatMap((p:string)=>[b.periods[p]?.sales,b.periods[p]?.units,b.periods[p]?.price,b.periods[p]?.salesShare==null?null:b.periods[p].salesShare*100])]})),{id:'__total',values:['Итого',...result.periods.flatMap((p:string)=>[result.totals[p].sales,result.totals[p].units,result.totals[p].price,100])]}]};
+    const t=analysis.tables[0];return {headers:t?['Строка',...Array.from({length:Math.max(1,...t.rows.map((r:any[])=>r.length))},(_,i)=>String(i+1))]:[],rows:t?t.rows.map((r:any[],i:number)=>({id:String(i),values:[i+1,...r]})):[]};
+  },[sheet,analysis,result]);
+  useEffect(()=>{const next:Record<string,string>={},diff:Record<string,string>={};for(const r of grid.rows)r.values.forEach((v:any,i:number)=>{const key=`${sheet}:${r.id}:${grid.headers[i]}`;next[key]=fmt(v);if(previous.current[key]!=null&&previous.current[key]!==next[key])diff[key]=previous.current[key];});if(JSON.stringify(previous.current)===JSON.stringify(next))return;if(Object.keys(previous.current).length)setChanged(diff);previous.current=next;},[grid,sheet]);
+  useEffect(()=>setPage(0),[sheet]);
+  useEffect(()=>setPage(p=>Math.min(p,Math.max(0,Math.ceil(grid.rows.length/100)-1))),[grid.rows.length]);
+  return createPortal(<dialog ref={dialog} className="market-page market-table-preview" onCancel={e=>{e.preventDefault();onClose();}} aria-label="Предварительный просмотр таблицы">
+    <header className="market-preview-toolbar"><strong>{analysis.title}</strong><span>Версия {analysis.revision}</span><button onClick={onDownload} disabled={busy||(!analysis.result&&!analysis.facts.some((f:Data)=>f.status==='approved'))}><Download size={17}/> Excel</button><button onClick={onClose} aria-label="Свернуть предварительный просмотр" title="Свернуть"><Minimize2 size={20}/></button></header>
+    <nav className="market-preview-sheets" aria-label="Листы отчета">{[['market','Рынок'],['details','Дозировки'],['facts','Сводки'],['comments','Комментарии']].map(([id,label])=><button key={id} aria-pressed={sheet===id} onClick={()=>setSheet(id)}>{label}</button>)}</nav>
+    <p className="market-preview-status" role="status">{busy?(workingLabel||analysis.progress||'Агент вносит изменения…'):analysis.error||'Изменения сохранены'}{!analysis.result&&lastResult.current?' · Показан предыдущий расчет, он пока не обновлен.':''}{!result&&analysis.tables.length?' · Исходный лист: первые 40 строк, расчет еще не готов.':''} {Object.keys(changed).length>0?`Изменено ячеек: ${Object.keys(changed).length}. Подсветка показывает последнюю правку.`:''}</p>
+    <div className="market-preview-grid"><table><thead><tr>{grid.headers.map((h:string,i:number)=><th key={i}>{h}</th>)}</tr></thead><tbody>{grid.rows.slice(page*100,page*100+100).map((r:Data)=><tr key={r.id}>{r.values.map((v:any,i:number)=>{const k=`${sheet}:${r.id}:${grid.headers[i]}`;return <td key={i} className={changed[k]!=null?'market-cell-changed':''} title={changed[k]!=null?`Было: ${changed[k]}`:undefined}>{fmt(v)}</td>;})}</tr>)}</tbody></table>{!grid.rows.length&&<p>На этом листе пока нет данных. Попросите агента подготовить расчет.</p>}</div>
+    {grid.rows.length>100&&<div className="market-preview-pages"><button disabled={!page} onClick={()=>setPage(page-1)}>Назад</button><span>{page+1} / {Math.ceil(grid.rows.length/100)}</span><button disabled={(page+1)*100>=grid.rows.length} onClick={()=>setPage(page+1)}>Далее</button></div>}
+    <div ref={panel} className={`market-floating-chat ${collapsed?'collapsed':''}`} style={position?{left:position.x,top:position.y,right:'auto',bottom:'auto'}:undefined}>
+      <div className="market-floating-bar"><button className="market-drag-handle" aria-label="Переместить чат: перетащите или используйте стрелки" onKeyDown={e=>{const delta:Record<string,[number,number]>={ArrowLeft:[-20,0],ArrowRight:[20,0],ArrowUp:[0,-20],ArrowDown:[0,20]};if(delta[e.key]){e.preventDefault();const r=panel.current!.getBoundingClientRect();setPosition(clamp(r.x+delta[e.key][0],r.y+delta[e.key][1]));}}}
+        onPointerDown={e=>{if(e.button!==0)return;const r=panel.current!.getBoundingClientRect();drag.current={x:e.clientX,y:e.clientY,left:r.x,top:r.y};e.currentTarget.setPointerCapture(e.pointerId);}}
+        onPointerMove={e=>{if(!drag.current)return;const d=drag.current;setPosition(clamp(d.left+e.clientX-d.x,d.top+e.clientY-d.y));}}
+        onPointerUp={()=>{drag.current=null;}} onPointerCancel={()=>{drag.current=null;}}><GripHorizontal size={19}/></button>{busy&&<LoaderCircle size={16} className="market-working-spinner" aria-hidden="true"/>}<span role="status">{busy?(workingLabel||'Агент работает…'):'Чат с агентом'}</span><button onClick={()=>setCollapsed(v=>!v)} aria-label={collapsed?'Развернуть чат':'Свернуть чат'} aria-expanded={!collapsed}>{collapsed?<ChevronUp size={18}/>:<ChevronDown size={18}/>}</button></div>
+      <div className="market-floating-content">{children}</div>
+    </div>
+  </dialog>,document.body);
+}

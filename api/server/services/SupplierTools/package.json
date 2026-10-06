@@ -1,0 +1,8 @@
+{
+  "name": "corp-supplier-tools",
+  "private": true,
+  "version": "1.0.0",
+  "dependencies": {
+    "exceljs": "4.4.0"
+  }
+}

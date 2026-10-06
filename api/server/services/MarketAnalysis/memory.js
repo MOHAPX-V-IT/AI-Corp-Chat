@@ -1,0 +1,9 @@
+const {fillComments: templates}=require('./templates');
+function memory(a){a.memory||={version:1,decisions:{},changes:[],commentOverrides:{}};return a.memory;}
+const key=c=>JSON.stringify([c.title,[...(c.evidenceIds||[])].sort()]);
+function evidence(a,c){return JSON.stringify({params:a.params,values:(c.evidenceIds||[]).map(id=>a.result?.metrics?.find(x=>x.id===id)||a.facts.find(x=>x.id===id)||a.notes.find(x=>x.id===id)||null)});}
+function capture(a){const m=memory(a);for(const c of a.comments||[])if(c.origin==='expert'){const k=key(c);const old=m.commentOverrides[k];m.commentOverrides[k]={...c,evidence:old?.text===c.text?old.evidence:evidence(a,c)};}}
+function fillComments(a){capture(a);const m=memory(a);return templates(a).map(c=>{const override=m.commentOverrides[key(c)];return override?{...c,id:override.id,text:override.text,origin:'expert',history:override.history||[],needsReview:override.evidence!==evidence(a,c),generatedText:c.text}:c;}).concat(Object.values(m.commentOverrides).filter(c=>c.custom).map(c=>({...c,needsReview:c.evidence!==evidence(a,c)})));}
+function snapshot(a){return structuredClone({title:a.title,params:a.params,expertNotes:a.expertNotes,tables:a.tables.map(t=>({id:t.id,enabled:t.enabled,mapping:t.mapping})),sources:a.files.map(f=>({id:f.id,source:f.source})),facts:[...a.facts,...a.notes].map(f=>({id:f.id,status:f.status,value:f.value,text:f.text})),comments:(a.comments||[]).map(c=>({id:c.id,text:c.text}))});}
+function rememberChanges(before,a,actor,request){capture(a);const after=snapshot(a),m=memory(a);for(const k of Object.keys(after))if(JSON.stringify(before[k])!==JSON.stringify(after[k]))m.changes.push({at:new Date().toISOString(),revision:a.revision,actor,request,section:k,before:before[k],after:after[k]});}
+module.exports={memory,capture,fillComments,snapshot,rememberChanges};

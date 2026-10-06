@@ -1,0 +1,9 @@
+# Architecture / Архитектура
+
+The application is a monorepo with React/Vite frontend, Express API and shared LibreChat workspace libraries. Custom domains are in `api/server/services/MarketAnalysis`, `Bilingual`, `SupplierTools`, transcript services and IPR routes/models. / Монорепозиторий включает клиент, API и общие библиотеки; бизнес-модули выделены по доменам.
+
+MongoDB stores users, messages, assistants, permissions, transcripts and development entries. Market/bilingual modules store per-owner document JSON and originals beneath uploads. PostgreSQL holds vectors and optional token telemetry. Meilisearch supplies indexed search. OCR runs in the separate RAG image with poppler/tesseract and its included document-loader override. / MongoDB хранит основные сущности; анализы/переводы и оригиналы — в пользовательских каталогах; векторы/телеметрия — в PostgreSQL; поиск — в Meilisearch; OCR — в отдельном RAG.
+
+Model selection has two layers: ordinary chats/assistants use configured endpoints; internal business features use the provider-neutral text adapter. Vision readers still use Google. Supplier tools communicate over local MCP stdio and generate downloadable artifacts. / Чат и внутренние функции имеют разные настройки провайдеров; визуальное чтение использует Google, инструменты поставщиков — локальный MCP.
+
+Ownership is enforced on the API; hiding a navigation item is not authorization. Personal translation and analysis history is isolated by account. IPR is intentionally hierarchical. Market job locking, queues and source caching are scoped to one process/analysis. Do not add replicas without distributed locking and shared persistence. / Права проверяет API; скрытая кнопка не заменяет авторизацию. Личная история изолирована, ИПР следует иерархии. Для масштабирования нужны общие блокировки и хранилище.

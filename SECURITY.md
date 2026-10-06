@@ -1,0 +1,9 @@
+# Security / Безопасность
+
+**EN:** Do not publish credentials, employee documents or full conversation logs in issues. Report suspected access-control or credential exposure privately to the repository maintainer using the contact configured on their GitHub profile; this project does not promise a monitored incident mailbox or a response SLA. Include affected version, reproduction with synthetic accounts and impact, never a live secret. The public-source checker is heuristic. Review provider retention, logging, upload limits, manager hierarchy and backup encryption before handling organizational data.
+
+Only the application port is loopback-published by default. MongoDB and PostgreSQL use fresh generated passwords. Use HTTPS for public deployment, keep registration policy explicit, and do not expose database or RAG ports. Run one API process until shared job coordination is implemented. Upstream dependencies need ongoing vulnerability maintenance; a successful build is not a security certification.
+
+**RU:** Не публикуйте ключи, документы сотрудников и полные логи бесед в issue. Сообщайте о возможной утечке или нарушении прав приватно владельцу репозитория через контакты его GitHub-профиля; проект не обещает постоянно отслеживаемый адрес или SLA. Укажите версию, шаги с синтетическими аккаунтами и последствия без рабочего секрета. Проверка исходников эвристическая. До обработки внутренних данных проверьте политику хранения провайдера, логи, лимиты файлов, иерархию руководителей и резервное копирование.
+
+По умолчанию публикуется только loopback-порт приложения; пароли баз генерируются заново. Для внешней установки используйте HTTPS, явную политику регистрации и закрытые порты баз/RAG. До распределённой координации запускайте один процесс API. Требуется обслуживание зависимостей; успешная сборка не является сертификацией безопасности.

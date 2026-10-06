@@ -1,0 +1,77 @@
+name: ai-corp-chat
+services:
+  api:
+    build: .
+    image: ai-corp-chat:local
+    restart: unless-stopped
+    env_file: .env
+    ports: ["127.0.0.1:${WEB_PORT:-3088}:3080"]
+    volumes:
+      - ./librechat.yaml:/app/librechat.yaml:ro
+      - ./secrets:/app/secrets:ro
+      - uploads:/app/uploads
+      - logs:/app/logs
+    depends_on:
+      mongodb: {condition: service_healthy}
+      vectordb: {condition: service_healthy}
+      meilisearch: {condition: service_started}
+      rag_api: {condition: service_started}
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 10s
+      start_period: 90s
+      retries: 5
+  mongodb:
+    image: mongo:8.0.17
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ai_corp
+      MONGO_INITDB_ROOT_PASSWORD: "${MONGO_PASSWORD:?Run npm run setup first}"
+    volumes: [mongo_data:/data/db]
+    healthcheck:
+      test: [CMD-SHELL, 'mongosh --quiet --username ai_corp --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.adminCommand({ping:1})" >/dev/null']
+      interval: 10s
+      timeout: 10s
+      retries: 20
+  meilisearch:
+    image: getmeili/meilisearch:v1.12.3
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: "${MEILI_MASTER_KEY:?Run npm run setup first}"
+      MEILI_NO_ANALYTICS: "true"
+    volumes: [meili_data:/meili_data]
+  vectordb:
+    image: pgvector/pgvector:0.8.0-pg15-trixie
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-ai_corp}"
+      POSTGRES_USER: "${POSTGRES_USER:-ai_corp}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Run npm run setup first}"
+    volumes: [vector_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+  rag_api:
+    build: deployment/rag-ocr
+    image: ai-corp-chat-rag:local
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_HOST: vectordb
+      OCR_LANGUAGES: rus+eng
+      OCR_DPI: "140"
+      OCR_MIN_PAGE_CHARS: "20"
+      OCR_MAX_PAGES: "100"
+      OCR_WORKERS: "1"
+      OCR_PAGE_TIMEOUT: "45"
+    depends_on:
+      vectordb: {condition: service_healthy}
+volumes:
+  mongo_data:
+  meili_data:
+  vector_data:
+  uploads:
+  logs:

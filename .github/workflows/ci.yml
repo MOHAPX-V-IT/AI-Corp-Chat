@@ -1,0 +1,21 @@
+name: Portable source checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm ci --prefix api/server/services/MarketAnalysis --no-audit --no-fund
+      - run: npm ci --prefix api/server/services/SupplierTools --no-audit --no-fund
+      - run: npm run check:public
+      - run: npm run test:portable
+      - run: npm run build
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144

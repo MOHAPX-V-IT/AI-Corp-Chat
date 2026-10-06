@@ -1,0 +1,45 @@
+version: 1.2.1
+cache: true
+interface:
+  customWelcome: "Чем могу помочь?"
+  endpointsMenu: true
+  modelSelect: true
+  parameters: true
+  sidePanel: true
+  bookmarks: true
+  agents: {use: true, share: true, public: true}
+  fileSearch: true
+  fileCitations: true
+  webSearch: true
+  mcpServers: {use: true, create: false, share: false, public: false}
+registration:
+  socialLogins: []
+endpoints:
+  google:
+    titleModel: "${CORP_GEMINI_MODEL}"
+  agents:
+    allowedProviders: [DeepSeek, google]
+    recursionLimit: 25
+    maxRecursionLimit: 50
+  custom:
+    - name: DeepSeek
+      apiKey: "${DEEPSEEK_API_KEY}"
+      baseURL: "${DEEPSEEK_BASE_URL}"
+      models:
+        default: ["${CHAT_MODEL}"]
+        fetch: false
+      titleConvo: true
+      titleModel: "${CHAT_MODEL}"
+      modelDisplayLabel: AI Corp Chat
+mcpServers:
+  supplier-tools:
+    type: stdio
+    command: node
+    args: ["${APP_ROOT}/api/server/services/SupplierTools/mcp-server.js"]
+    timeout: 120000
+    initTimeout: 30000
+    env:
+      DOMAIN_CLIENT: "${DOMAIN_CLIENT}"
+      SUPPLIER_ARTIFACTS_DIR: "${SUPPLIER_ARTIFACTS_DIR}"
+balance: {enabled: false}
+transactions: {enabled: true}
